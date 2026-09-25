@@ -57,6 +57,7 @@
             border: 1px solid #ced4da;
             border-radius: 6px;
             font-size: 14px;
+            text-transform: uppercase; /* Força visualmente em maiúsculo */
         }
         .counters {
             display: flex;
@@ -98,6 +99,7 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 13px;
+            text-transform: uppercase;
         }
         .btn {
             background-color: var(--primary);
@@ -164,11 +166,11 @@
         <div class="form-row">
             <div class="form-group">
                 <label for="clinicaNome">Nome da Clínica / Unidade</label>
-                <input type="text" id="clinicaNome" placeholder="Ex: Hapvida Centro">
+                <input type="text" id="clinicaNome" placeholder="Ex: Hapvida Centro" oninput="this.value = this.value.toUpperCase()">
             </div>
             <div class="form-group">
                 <label for="cidadeClinica">Cidade</label>
-                <input type="text" id="cidadeClinica" placeholder="Ex: Fortaleza">
+                <input type="text" id="cidadeClinica" placeholder="Ex: Fortaleza" oninput="this.value = this.value.toUpperCase()">
             </div>
             <div class="form-group">
                 <label for="estadoClinica">Estado (UF)</label>
@@ -284,7 +286,7 @@
             const clinica = todas[id];
             const opt = document.createElement('option');
             opt.value = id;
-            opt.innerText = `${clinica.nomeClinica} (${clinica.cidade} - ${clinica.estado})`;
+            opt.innerText = `${clinica.nomeClinica} (${clinica.cidade} - ${clinica.estado})`.toUpperCase();
             select.appendChild(opt);
         }
     }
@@ -295,8 +297,8 @@
         const todas = await obterTodasClinicas();
         const u = todas[id];
         if (u) {
-            document.getElementById('clinicaNome').value = u.nomeClinica;
-            document.getElementById('cidadeClinica').value = u.cidade;
+            document.getElementById('clinicaNome').value = (u.nomeClinica || '').toUpperCase();
+            document.getElementById('cidadeClinica').value = (u.cidade || '').toUpperCase();
             document.getElementById('estadoClinica').value = u.estado;
             
             const tbody = document.querySelector('#tabelaMedicos tbody');
@@ -332,9 +334,9 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${i + 1}</td>
-            <td><input type="text" class="table-input med-nome" value="${dados.nome}" placeholder="Nome completo" oninput="this.value = this.value.toUpperCase()"></td>
-            <td><input type="text" class="table-input med-crm" value="${dados.crm}" placeholder="Ex: 12345"></td>
-            <td><input type="text" class="table-input med-esp" value="${dados.especialidade}" placeholder="Ex: Cardiologia"></td>
+            <td><input type="text" class="table-input med-nome" value="${(dados.nome || '').toUpperCase()}" placeholder="NOME COMPLETO" oninput="this.value = this.value.toUpperCase()"></td>
+            <td><input type="text" class="table-input med-crm" value="${(dados.crm || '').toUpperCase()}" placeholder="EX: 12345" oninput="this.value = this.value.toUpperCase()"></td>
+            <td><input type="text" class="table-input med-esp" value="${(dados.especialidade || '').toUpperCase()}" placeholder="EX: CARDIOLOGIA" oninput="this.value = this.value.toUpperCase()"></td>
             <td><input type="date" class="table-input med-data" value="${dados.data}"></td>
             <td>
                 <select class="table-input med-status" onchange="atualizarContadores()">
@@ -381,8 +383,8 @@
     }
 
     async function salvarUnidadeNoBanco() {
-        const nomeClinica = document.getElementById('clinicaNome').value.trim();
-        const cidade = document.getElementById('cidadeClinica').value.trim();
+        const nomeClinica = document.getElementById('clinicaNome').value.trim().toUpperCase();
+        const cidade = document.getElementById('cidadeClinica').value.trim().toUpperCase();
         const estado = document.getElementById('estadoClinica').value;
 
         if (!nomeClinica || !cidade || !estado) {
@@ -399,8 +401,8 @@
         linhas.forEach(tr => {
             medicos.push({
                 nome: tr.querySelector('.med-nome').value.toUpperCase(),
-                crm: tr.querySelector('.med-crm').value,
-                especialidade: tr.querySelector('.med-esp').value,
+                crm: tr.querySelector('.med-crm').value.toUpperCase(),
+                especialidade: tr.querySelector('.med-esp').value.toUpperCase(),
                 data: tr.querySelector('.med-data').value,
                 status: tr.querySelector('.med-status').value
             });
