@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hapvida - Controle de Termo de Ciência por Unidade</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase CDN Oficial -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #343a40;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6f9;
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        #loginScreen {
+            max-width: 400px;
+            margin: 80px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h2 { color: var(--primary); margin-top: 0; }
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
+        input, select {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .counters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .counter-card {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .counter-card span { display: block; font-size: 20px; font-weight: 700; margin-top: 5px; }
+        .counter-card.total span { color: var(--primary); }
+        .counter-card.preenchido span { color: var(--success); }
+        .counter-card.pendente span { color: var(--warning); }
+        .counter-card.recusado span { color: var(--danger); }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 13px;
+        }
+        th { background-color: var(--light); color: var(--dark); }
+        input.table-input, select.table-input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #004085; }
+        .btn-danger { background-color: var(--danger); padding: 6px 10px; font-size: 12px; }
+        .btn-danger:hover { background-color: #bd2130; }
+        .btn-add { background-color: var(--success); margin-bottom: 15px; padding: 8px 15px; font-size: 13px; }
+        .btn-add:hover { background-color: #218838; }
+        .btn-new { background-color: #6c757d; margin-top: 0; }
+        .btn-new:hover { background-color: #5a6268; }
+        .top-selector-bar {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <div id="loginScreen">
+        <h2>Acesso à Unidade</h2>
+        <p style="font-size: 13px; color: #6c757d;">Digite a senha para acessar o controle do Termo de Ciência.</p>
+        <div class="form-group" style="text-align: left; margin-bottom: 15px;">
+            <label>Senha de Acesso</label>
+            <input type="password" id="txtSenha" placeholder="Digite a senha">
+        </div>
+        <button class="btn" style="width: 100%; margin-top: 0;" onclick="verificarSenha()">Entrar</button>
+    </div>
+
+    <!-- TELA PRINCIPAL DO SISTEMA -->
+    <div id="mainApp" class="container hidden">
+        <h2>Controle de Termo de Ciência - Unidade</h2>
+        
+        <!-- SEPARAÇÃO DOS FILTROS E NOVA UNIDADE -->
+        <div class="top-selector-bar">
+            <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                <label>🔍 Buscar Unidade Existente (Para Alterar Status)</label>
+                <select id="selectClinicaExistente" onchange="carregarClinicaSelecionada()">
+                    <option value="">-- Selecione uma unidade já cadastrada --</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label>➕ Quer cadastrar do zero?</label>
+                <button class="btn btn-new" style="width: 100%; padding: 10px;" onclick="cliqueNovaUnidade()">Nova Unidade</button>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="clinicaNome">Nome da Clínica / Unidade</label>
+                <input type="text" id="clinicaNome" placeholder="Ex: Hapvida Centro">
+            </div>
+            <div class="form-group">
+                <label for="cidadeClinica">Cidade</label>
+                <input type="text" id="cidadeClinica" placeholder="Ex: Fortaleza">
+            </div>
+            <div class="form-group">
+                <label for="estadoClinica">Estado (UF)</label>
+                <select id="estadoClinica">
+                    <option value="">Selecione</option>
+                    <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="counters">
+            <div class="counter-card total">
+                Total
+                <span id="lblTotal">0</span>
+            </div>
+            <div class="counter-card preenchido">
+                Preenchidos
+                <span id="lblPreenchido">0</span>
+            </div>
+            <div class="counter-card pendente">
+                Pendentes
+                <span id="lblPendente">0</span>
+            </div>
+            <div class="counter-card recusado">
+                Recusados
+                <span id="lblRecusado">0</span>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Relação de Médicos</h3>
+            <button class="btn btn-add" onclick="adicionarLinhaMedico()">+ Adicionar Médico</button>
+        </div>
+
+        <table id="tabelaMedicos">
+            <thead>
+                <tr>
+                    <th style="width: 4%;">#</th>
+                    <th style="width: 28%;">Nome do Médico</th>
+                    <th style="width: 15%;">CRM</th>
+                    <th style="width: 20%;">Especialidade</th>
+                    <th style="width: 15%;">Data Assinatura</th>
+                    <th style="width: 13%;">Status</th>
+                    <th style="width: 5%;">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dinâmico -->
+            </tbody>
+        </table>
+
+        <button class="btn" onclick="salvarUnidadeNoBanco()">Salvar e Sincronizar Cadastro</button>
+    </div>
+
+<script>
+    const SUPABASE_URL = 'https://mlvdgmvmuzbcughekpiz.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_04TgybpwC683g-FRmfFLBg_2qwAVVzl';
+    
+    let supabaseClient = null;
+    try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch(e) { console.error("Erro Supabase:", e); }
+
+    const STORAGE_KEY = "hapvida_termos_unidades_v2";
+
+    function verificarSenha() {
+        const senha = document.getElementById('txtSenha').value;
+        if (senha === 'melhoria1234') {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            carregarListaClinicasSelect();
+        } else {
+            alert('Senha incorreta!');
+            document.getElementById('txtSenha').value = '';
+        }
+    }
+
+    async function obterTodasClinicas() {
+        if (supabaseClient) {
+            try {
+                let { data, error } = await supabaseClient.from('clinicas_hapvida').select('*');
+                if (!error && data) {
+                    let obj = {};
+                    data.forEach(item => { obj[item.id] = item.dados; });
+                    return obj;
+                }
+            } catch(err) { console.error(err); }
+        }
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    }
+
+    async function salvarTodasClinicas(idUnidade, unidadeData) {
+        let salvoNaNuvem = false;
+        if (supabaseClient) {
+            try {
+                let { error } = await supabaseClient
+                    .from('clinicas_hapvida')
+                    .upsert({ id: idUnidade, dados: unidadeData });
+                if (!error) salvoNaNuvem = true;
+            } catch(err) { console.error(err); }
+        }
+        let todas = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        todas[idUnidade] = unidadeData;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(todas));
+        return salvoNaNuvem;
+    }
+
+    async function carregarListaClinicasSelect() {
+        const todas = await obterTodasClinicas();
+        const select = document.getElementById('selectClinicaExistente');
+        select.innerHTML = '<option value="">-- Selecione uma unidade já cadastrada --</option>';
+        for (let id in todas) {
+            const clinica = todas[id];
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.innerText = `${clinica.nomeClinica} (${clinica.cidade} - ${clinica.estado})`;
+            select.appendChild(opt);
+        }
+    }
+
+    async function carregarClinicaSelecionada() {
+        const id = document.getElementById('selectClinicaExistente').value;
+        if (!id) return;
+        const todas = await obterTodasClinicas();
+        const u = todas[id];
+        if (u) {
+            document.getElementById('clinicaNome').value = u.nomeClinica;
+            document.getElementById('cidadeClinica').value = u.cidade;
+            document.getElementById('estadoClinica').value = u.estado;
+            
+            const tbody = document.querySelector('#tabelaMedicos tbody');
+            tbody.innerHTML = '';
+            if (u.medicos && u.medicos.length > 0) {
+                u.medicos.forEach(m => adicionarLinhaMedico(m));
+            } else {
+                adicionarLinhaMedico();
+            }
+            atualizarContadores();
+        }
+    }
+
+    function cliqueNovaUnidade() {
+        if (confirm("Deseja cadastrar uma nova unidade? Os dados da tela atual serão limpos para evitar confusão nos cadastros.")) {
+            limparParaNovaUnidade();
+        }
+    }
+
+    function limparParaNovaUnidade() {
+        document.getElementById('selectClinicaExistente').value = '';
+        document.getElementById('clinicaNome').value = '';
+        document.getElementById('cidadeClinica').value = '';
+        document.getElementById('estadoClinica').value = '';
+        document.getElementById('tabelaMedicos tbody').innerHTML = '';
+        adicionarLinhaMedico();
+        atualizarContadores();
+    }
+
+    function adicionarLinhaMedico(dados = { nome: '', crm: '', especialidade: '', data: '', status: 'Pendente' }) {
+        const tbody = document.querySelector('#tabelaMedicos tbody');
+        const i = tbody.rows.length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${i + 1}</td>
+            <td><input type="text" class="table-input med-nome" value="${dados.nome}" placeholder="Nome completo" oninput="this.value = this.value.toUpperCase()"></td>
+            <td><input type="text" class="table-input med-crm" value="${dados.crm}" placeholder="Ex: 12345"></td>
+            <td><input type="text" class="table-input med-esp" value="${dados.especialidade}" placeholder="Ex: Cardiologia"></td>
+            <td><input type="date" class="table-input med-data" value="${dados.data}"></td>
+            <td>
+                <select class="table-input med-status" onchange="atualizarContadores()">
+                    <option value="Pendente" ${dados.status === 'Pendente' ? 'selected' : ''} style="color:#d39e00;">Pendente</option>
+                    <option value="Preenchido" ${dados.status === 'Preenchido' ? 'selected' : ''} style="color:green;">Preenchido</option>
+                    <option value="Recusado" ${dados.status === 'Recusado' ? 'selected' : ''} style="color:red;">Recusado</option>
+                </select>
+            </td>
+            <td><button class="btn btn-danger" onclick="removerLinha(this)">X</button></td>
+        `;
+        tbody.appendChild(tr);
+        atualizarContadores();
+    }
+
+    function removerLinha(btn) {
+        btn.closest('tr').remove();
+        reindexarTabela();
+        atualizarContadores();
+    }
+
+    function reindexarTabela() {
+        const rows = document.querySelectorAll('#tabelaMedicos tbody tr');
+        rows.forEach((tr, index) => {
+            tr.cells[0].innerText = index + 1;
+        });
+    }
+
+    function atualizarContadores() {
+        const statusElements = document.querySelectorAll('.med-status');
+        let preenchidos = 0;
+        let pendentes = 0;
+        let recusados = 0;
+
+        statusElements.forEach(el => {
+            if (el.value === 'Preenchido') preenchidos++;
+            else if (el.value === 'Recusado') recusados++;
+            else pendentes++;
+        });
+
+        document.getElementById('lblTotal').innerText = statusElements.length;
+        document.getElementById('lblPreenchido').innerText = preenchidos;
+        document.getElementById('lblPendente').innerText = pendentes;
+        document.getElementById('lblRecusado').innerText = recusados;
+    }
+
+    async function salvarUnidadeNoBanco() {
+        const nomeClinica = document.getElementById('clinicaNome').value.trim();
+        const cidade = document.getElementById('cidadeClinica').value.trim();
+        const estado = document.getElementById('estadoClinica').value;
+
+        if (!nomeClinica || !cidade || !estado) {
+            alert('Por favor, preencha o Nome da Clínica, a Cidade e selecione o Estado.');
+            return;
+        }
+
+        const idUnidade = nomeClinica.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '_') + '_' + estado.toLowerCase();
+        
+        const linhas = document.querySelectorAll('#tabelaMedicos tbody tr');
+        let medicos = [];
+        linhas.forEach(tr => {
+            medicos.push({
+                nome: tr.querySelector('.med-nome').value.toUpperCase(),
+                crm: tr.querySelector('.med-crm').value,
+                especialidade: tr.querySelector('.med-esp').value,
+                data: tr.querySelector('.med-data').value,
+                status: tr.querySelector('.med-status').value
+            });
+        });
+
+        const preenchidos = medicos.filter(m => m.status === 'Preenchido').length;
+        const pendentes = medicos.filter(m => m.status === 'Pendente').length;
+        const recusados = medicos.filter(m => m.status === 'Recusado').length;
+
+        const unidadeData = {
+            id: idUnidade,
+            nomeClinica,
+            cidade,
+            estado,
+            qtdMedicos: medicos.length,
+            preenchidos,
+            pendentes,
+            recusados,
+            medicos,
+            ultimaAtualizacao: new Date().toISOString()
+        };
+
+        const sucessoNuvem = await salvarTodasClinicas(idUnidade, unidadeData);
+        if (sucessoNuvem) {
+            alert('Sucesso! Dados salvos e sincronizados com o BI.');
+        } else {
+            alert('Salvo com sucesso!');
+        }
+        
+        carregarListaClinicasSelect();
+        document.getElementById('selectClinicaExistente').value = idUnidade;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if(document.querySelectorAll('#tabelaMedicos tbody tr').length === 0) {
+            adicionarLinhaMedico();
+        }
+    });
+</script>
+
+</body>
+</html>
