@@ -57,7 +57,7 @@
             border: 1px solid #ced4da;
             border-radius: 6px;
             font-size: 14px;
-            text-transform: uppercase; /* Força visualmente em maiúsculo */
+            text-transform: uppercase;
         }
         .counters {
             display: flex;
@@ -116,6 +116,8 @@
         .btn:hover { background-color: #004085; }
         .btn-danger { background-color: var(--danger); padding: 6px 10px; font-size: 12px; }
         .btn-danger:hover { background-color: #bd2130; }
+        .btn-delete-unit { background-color: #721c24; margin-top: 0; padding: 10px; }
+        .btn-delete-unit:hover { background-color: #491217; }
         .btn-add { background-color: var(--success); margin-bottom: 15px; padding: 8px 15px; font-size: 13px; }
         .btn-add:hover { background-color: #218838; }
         .btn-new { background-color: #6c757d; margin-top: 0; }
@@ -149,7 +151,7 @@
     <div id="mainApp" class="container hidden">
         <h2>Controle de Termo de Ciência - Unidade</h2>
         
-        <!-- SEPARAÇÃO DOS FILTROS E NOVA UNIDADE -->
+        <!-- SEPARAÇÃO DOS FILTROS E AÇÕES -->
         <div class="top-selector-bar">
             <div class="form-group" style="flex: 2; margin-bottom: 0;">
                 <label>🔍 Buscar Unidade Existente (Para Alterar Status)</label>
@@ -158,8 +160,12 @@
                 </select>
             </div>
             <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <label>➕ Quer cadastrar do zero?</label>
+                <label>➕ Novo Cadastro</label>
                 <button class="btn btn-new" style="width: 100%; padding: 10px;" onclick="cliqueNovaUnidade()">Nova Unidade</button>
+            </div>
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label>🗑️ Excluir Incorreta</label>
+                <button class="btn btn-delete-unit" style="width: 100%;" onclick="solicitarSenhaExclusao()">Excluir Unidade</button>
             </div>
         </div>
 
@@ -235,6 +241,7 @@
     } catch(e) { console.error("Erro Supabase:", e); }
 
     const STORAGE_KEY = "hapvida_termos_unidades_v2";
+    const SENHA_EXCLUSAO = "excluir9988"; // <--- SENHA EXCLUSIVA PARA APAGAR UNIDADES
 
     function verificarSenha() {
         const senha = document.getElementById('txtSenha').value;
@@ -278,6 +285,23 @@
         return salvoNaNuvem;
     }
 
+    async function excluirUnidadeDoBanco(idUnidade) {
+        let excluidoNaNuvem = false;
+        if (supabaseClient) {
+            try {
+                let { error } = await supabaseClient
+                    .from('clinicas_hapvida')
+                    .delete()
+                    .eq('id', idUnidade);
+                if (!error) excluidoNaNuvem = true;
+            } catch(err) { console.error(err); }
+        }
+        let todas = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        delete todas[idUnidade];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(todas));
+        return excluidoNaNuvem;
+    }
+
     async function carregarListaClinicasSelect() {
         const todas = await obterTodasClinicas();
         const select = document.getElementById('selectClinicaExistente');
@@ -312,8 +336,32 @@
         }
     }
 
+    async function solicitarSenhaExclusao() {
+        const idUnidade = document.getElementById('selectClinicaExistente').value;
+        const nomeClinicaInput = document.getElementById('clinicaNome').value;
+
+        if (!idUnidade) {
+            alert('Por favor, selecione na lista qual unidade cadastrada errada você deseja excluir.');
+            return;
+        }
+
+        const senhaDigitada = prompt(`Ação restrita! Digite a senha administrativa de exclusão para apagar a unidade "${nomeClinicaInput}":`);
+        if (senhaDigitada === null) return; // Cancelado
+
+        if (senhaDigitada === SENHA_EXCLUSAO) {
+            if (confirm(`Tem certeza absoluta que deseja EXCLUIR a unidade "${nomeClinicaInput}"? Ela desaparecerá completamente do BI!`)) {
+                const sucesso = await excluirUnidadeDoBanco(idUnidade);
+                alert('Unidade excluída com sucesso!');
+                limparParaNovaUnidade();
+                carregarListaClinicasSelect();
+            }
+        } else {
+            alert('Senha de exclusão incorreta!');
+        }
+    }
+
     function cliqueNovaUnidade() {
-        if (confirm("Deseja cadastrar uma nova unidade? Os dados da tela atual serão limpos para evitar confusão nos cadastros.")) {
+        if (confirm("Deseja cadastrar uma nova unidade? Os dados da tela atual serão limpos.")) {
             limparParaNovaUnidade();
         }
     }
