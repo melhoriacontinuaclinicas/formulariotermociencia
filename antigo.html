@@ -41,21 +41,6 @@
             text-align: center;
         }
         h2 { color: var(--primary); margin-top: 0; }
-        
-        /* Caixa de Instruções */
-        .instructions-box {
-            background-color: #e7f1ff;
-            border-left: 4px solid var(--primary);
-            padding: 15px 20px;
-            border-radius: 6px;
-            margin-bottom: 25px;
-            font-size: 13.5px;
-            line-height: 1.5;
-        }
-        .instructions-box h4 { margin: 0 0 8px 0; color: var(--primary); font-size: 15px; }
-        .instructions-box ol { margin: 0; padding-left: 20px; }
-        .instructions-box li { margin-bottom: 4px; }
-
         .form-row {
             display: grid;
             grid-template-columns: 2fr 1fr 1fr;
@@ -65,7 +50,6 @@
         .form-group {
             display: flex;
             flex-direction: column;
-            position: relative;
         }
         label { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
         input, select {
@@ -75,35 +59,6 @@
             font-size: 14px;
             text-transform: uppercase;
         }
-        
-        /* Lista suspensa de sugestões flutuante */
-        .autocomplete-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #fff;
-            border: 1px solid #ced4da;
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            max-height: 220px;
-            overflow-y: auto;
-            z-index: 99;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .autocomplete-item {
-            padding: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            text-transform: uppercase;
-            border-bottom: 1px solid #f1f1f1;
-        }
-        .autocomplete-item:hover {
-            background-color: #f8f9fa;
-            color: var(--primary);
-            font-weight: 600;
-        }
-
         .counters {
             display: flex;
             gap: 15px;
@@ -172,8 +127,7 @@
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
+            display: flex;
             gap: 15px;
             align-items: flex-end;
         }
@@ -185,7 +139,7 @@
     <!-- TELA DE LOGIN -->
     <div id="loginScreen">
         <h2>Acesso à Unidade</h2>
-        <p style="font-size: 13.5px; color: #6c757d;">Digite a senha para acessar o controle do Termo de Ciência.</p>
+        <p style="font-size: 13px; color: #6c757d;">Digite a senha para acessar o controle do Termo de Ciência.</p>
         <div class="form-group" style="text-align: left; margin-bottom: 15px;">
             <label>Senha de Acesso</label>
             <input type="password" id="txtSenha" placeholder="Digite a senha">
@@ -197,36 +151,23 @@
     <div id="mainApp" class="container hidden">
         <h2>Controle de Termo de Ciência - Unidade</h2>
         
-        <!-- INSTRUÇÕES NA TELA -->
-        <div class="instructions-box">
-            <h4>💡 Instruções de Utilização:</h4>
-            <ol>
-                <li><strong>Para Consultar ou Editar:</strong> Clique na barra de pesquisa abaixo para ver a lista de clínicas em ordem alfabética[cite: 1] ou comece a digitar o nome da unidade para filtrar instantaneamente[cite: 1].</li>
-                <li><strong>Para Atualizar o Nome:</strong> Se precisar corrigir o nome da clínica, altere-o nos campos abaixo e clique em <em>"Salvar e Sincronizar"</em> (o sistema atualiza o registro atual sem criar duplicadas).</li>
-                <li><strong>Para Novo Cadastro:</strong> Clique em <strong>"Nova Unidade"</strong>, preencha os dados e adicione os médicos correspondentes.</li>
-            </ol>
-        </div>
-
-        <!-- BARRA DE PESQUISA COM AUTOCOMPLETAR DINÂMICO -->
+        <!-- SEPARAÇÃO DOS FILTROS E AÇÕES -->
         <div class="top-selector-bar">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>🔍 Clique ou digite para pesquisar a clínica</label>
-                <input type="text" id="inputBuscaClinica" placeholder="CLIQUE AQUI PARA VER A LISTA..." onfocus="mostrarTodasClinicas()" oninput="filtrarClinicasDigitadas()" autocomplete="off">
-                <div id="listaSugestoes" class="autocomplete-list hidden"></div>
+            <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                <label>🔍 Buscar Unidade Existente (Para Alterar Status)</label>
+                <select id="selectClinicaExistente" onchange="carregarClinicaSelecionada()">
+                    <option value="">-- Selecione uma unidade já cadastrada --</option>
+                </select>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
                 <label>➕ Novo Cadastro</label>
-                <button class="btn btn-new" style="width: 100%; padding: 10px; margin-top:0;" onclick="cliqueNovaUnidade()">Nova Unidade</button>
+                <button class="btn btn-new" style="width: 100%; padding: 10px;" onclick="cliqueNovaUnidade()">Nova Unidade</button>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
                 <label>🗑️ Excluir Incorreta</label>
                 <button class="btn btn-delete-unit" style="width: 100%;" onclick="solicitarSenhaExclusao()">Excluir Unidade</button>
             </div>
         </div>
-
-        <!-- ID Fixo oculto -->
-        <input type="hidden" id="clinicaIdFixo" value="">
-        <input type="hidden" id="idClinicaSelecionada" value="">
 
         <div class="form-row">
             <div class="form-group">
@@ -300,34 +241,32 @@
     } catch(e) { console.error("Erro Supabase:", e); }
 
     const STORAGE_KEY = "hapvida_termos_unidades_v2";
-    const SENHA_EXCLUSAO = "excluir9988"; 
-    let listaClinicasCache = {}; 
+    const SENHA_EXCLUSAO = "excluir9988"; // <--- SENHA EXCLUSIVA PARA APAGAR UNIDADES
 
     function verificarSenha() {
         const senha = document.getElementById('txtSenha').value;
         if (senha === 'melhoria1234') {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
-            carregarDadosIniciais();
+            carregarListaClinicasSelect();
         } else {
             alert('Senha incorreta!');
             document.getElementById('txtSenha').value = '';
         }
     }
 
-    async function carregarDadosIniciais() {
+    async function obterTodasClinicas() {
         if (supabaseClient) {
             try {
                 let { data, error } = await supabaseClient.from('clinicas_hapvida').select('*');
                 if (!error && data) {
                     let obj = {};
                     data.forEach(item => { obj[item.id] = item.dados; });
-                    listaClinicasCache = obj;
-                    return;
+                    return obj;
                 }
             } catch(err) { console.error(err); }
         }
-        listaClinicasCache = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     }
 
     async function salvarTodasClinicas(idUnidade, unidadeData) {
@@ -343,7 +282,6 @@
         let todas = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
         todas[idUnidade] = unidadeData;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(todas));
-        listaClinicasCache = todas;
         return salvoNaNuvem;
     }
 
@@ -361,60 +299,28 @@
         let todas = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
         delete todas[idUnidade];
         localStorage.setItem(STORAGE_KEY, JSON.stringify(todas));
-        listaClinicasCache = todas;
         return excluidoNaNuvem;
     }
 
-    async function mostrarTodasClinicas() {
-        await carregarDadosIniciais();
-        renderizarListaSugestoes('');
-    }
-
-    async function filtrarClinicasDigitadas() {
-        await carregarDadosIniciais();
-        const termo = document.getElementById('inputBuscaClinica').value.trim().toUpperCase();
-        renderizarListaSugestoes(termo);
-    }
-
-    function renderizarListaSugestoes(termoFiltro) {
-        const listaDiv = document.getElementById('listaSugestoes');
-        listaDiv.innerHTML = '';
-
-        let arrayClinicas = [];
-        for (let id in listaClinicasCache) {
-            const clinica = listaClinicasCache[id];
-            const textoFormatado = `${clinica.nomeClinica} (${clinica.cidade} - ${clinica.estado})`.toUpperCase();
-            arrayClinicas.push({ id: id, texto: textoFormatado });
+    async function carregarListaClinicasSelect() {
+        const todas = await obterTodasClinicas();
+        const select = document.getElementById('selectClinicaExistente');
+        select.innerHTML = '<option value="">-- Selecione uma unidade já cadastrada --</option>';
+        for (let id in todas) {
+            const clinica = todas[id];
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.innerText = `${clinica.nomeClinica} (${clinica.cidade} - ${clinica.estado})`.toUpperCase();
+            select.appendChild(opt);
         }
-
-        arrayClinicas.sort((a, b) => a.texto.localeCompare(b.texto)); // Ordem alfabética[cite: 1]
-
-        const filtradas = arrayClinicas.filter(item => item.texto.includes(termoFiltro));
-
-        if (filtradas.length === 0) {
-            listaDiv.classList.add('hidden');
-            return;
-        }
-
-        filtradas.forEach(item => {
-            const divItem = document.createElement('div');
-            divItem.className = 'autocomplete-item';
-            divItem.innerText = item.texto;
-            divItem.onclick = () => selecionarClinica(item.id, item.texto);
-            listaDiv.appendChild(divItem);
-        });
-
-        listaDiv.classList.remove('hidden');
     }
 
-    function selecionarClinica(id, textoFormatado) {
-        document.getElementById('inputBuscaClinica').value = textoFormatado;
-        document.getElementById('listaSugestoes').classList.add('hidden');
-        document.getElementById('idClinicaSelecionada').value = id;
-
-        const u = listaClinicasCache[id];
+    async function carregarClinicaSelecionada() {
+        const id = document.getElementById('selectClinicaExistente').value;
+        if (!id) return;
+        const todas = await obterTodasClinicas();
+        const u = todas[id];
         if (u) {
-            document.getElementById('clinicaIdFixo').value = u.id_interno || id;
             document.getElementById('clinicaNome').value = (u.nomeClinica || '').toUpperCase();
             document.getElementById('cidadeClinica').value = (u.cidade || '').toUpperCase();
             document.getElementById('estadoClinica').value = u.estado;
@@ -430,29 +336,24 @@
         }
     }
 
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.form-group')) {
-            document.getElementById('listaSugestoes').classList.add('hidden');
-        }
-    });
-
     async function solicitarSenhaExclusao() {
-        const idUnidade = document.getElementById('idClinicaSelecionada').value;
+        const idUnidade = document.getElementById('selectClinicaExistente').value;
         const nomeClinicaInput = document.getElementById('clinicaNome').value;
 
         if (!idUnidade) {
-            alert('Por favor, pesquise e selecione na lista qual unidade cadastrada você deseja excluir.');
+            alert('Por favor, selecione na lista qual unidade cadastrada errada você deseja excluir.');
             return;
         }
 
         const senhaDigitada = prompt(`Ação restrita! Digite a senha administrativa de exclusão para apagar a unidade "${nomeClinicaInput}":`);
-        if (senhaDigitada === null) return; 
+        if (senhaDigitada === null) return; // Cancelado
 
         if (senhaDigitada === SENHA_EXCLUSAO) {
             if (confirm(`Tem certeza absoluta que deseja EXCLUIR a unidade "${nomeClinicaInput}"? Ela desaparecerá completamente do BI!`)) {
-                await excluirUnidadeDoBanco(idUnidade);
+                const sucesso = await excluirUnidadeDoBanco(idUnidade);
                 alert('Unidade excluída com sucesso!');
                 limparParaNovaUnidade();
+                carregarListaClinicasSelect();
             }
         } else {
             alert('Senha de exclusão incorreta!');
@@ -466,9 +367,7 @@
     }
 
     function limparParaNovaUnidade() {
-        document.getElementById('inputBuscaClinica').value = '';
-        document.getElementById('idClinicaSelecionada').value = '';
-        document.getElementById('clinicaIdFixo').value = '';
+        document.getElementById('selectClinicaExistente').value = '';
         document.getElementById('clinicaNome').value = '';
         document.getElementById('cidadeClinica').value = '';
         document.getElementById('estadoClinica').value = '';
@@ -541,13 +440,9 @@
             return;
         }
 
-        let idFixo = document.getElementById('clinicaIdFixo').value;
-        if (!idFixo) {
-            idFixo = 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            document.getElementById('clinicaIdFixo').value = idFixo;
-        }
-
-        const idUnidade = idFixo;
+        const idUnidade = nomeClinica.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '_') + '_' + estado.toLowerCase();
         
         const linhas = document.querySelectorAll('#tabelaMedicos tbody tr');
         let medicos = [];
@@ -567,7 +462,6 @@
 
         const unidadeData = {
             id: idUnidade,
-            id_interno: idFixo,
             nomeClinica,
             cidade,
             estado,
@@ -586,8 +480,8 @@
             alert('Salvo com sucesso!');
         }
         
-        document.getElementById('idClinicaSelecionada').value = idUnidade;
-        document.getElementById('inputBuscaClinica').value = `${nomeClinica} (${cidade} - ${estado})`.toUpperCase();
+        carregarListaClinicasSelect();
+        document.getElementById('selectClinicaExistente').value = idUnidade;
     }
 
     document.addEventListener("DOMContentLoaded", () => {
